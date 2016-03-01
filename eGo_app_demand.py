@@ -47,6 +47,9 @@ def calculate_slp(mode, schema, table):
               excess=True)
     
     demand = sink.Simple(uid="demand", inputs=[bel])
+    
+    # TODO: iterate over rows of input table and over demand type (go, h0,...)
+    # maybe implement this with the help of pandas apply() to avoid for loops
     helpers.call_demandlib(demand,
                            method='calculate_profile',
                            year=year,
@@ -59,10 +62,12 @@ def calculate_slp(mode, schema, table):
                                 {'ann_el_demand': (
                                     dummy_demand['industrial'] * 1e6),
                                  'selp_type': 'i0'}])
-                                 
+
     print(demand.val.loc['2015-01-13'], demand.val.sum())
-#    demand.val.loc['2015-01-13'].to_csv('slp_20150113.csv')
+
+        
     
+    # TODO: will be used when annual power demand is in database table
     # different modi are foreseen
     # a) lastgebiete: iterate over whole table, calucalate slp for each row
     # (a row represents a lastgebiet) and write new results table with lgid as
@@ -70,8 +75,6 @@ def calculate_slp(mode, schema, table):
     # b) calculate slp for a specific location based on
     #  i) geo location (lat, lon)
     #  ii) nuts code or similar
-    
-    # TODO: will be used when annual power demand is in database table
     if mode == 'lastgebiete':
         
         # retrieve table with processed input data
