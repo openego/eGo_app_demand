@@ -63,8 +63,7 @@ def calculate_slp(mode, schema, table):
 if __name__ == '__main__':
     # welcome message
     parser = argparse.ArgumentParser(description='This is the demandlib ' +
-        'applied in the open_eGo project.' +
-        'Exemplary ')
+        'applied in the open_eGo project.')
     
     parser.add_argument('mode', help='Currently only "lastgebiete" is a  ' +
         'input!')
