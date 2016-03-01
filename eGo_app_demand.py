@@ -31,7 +31,38 @@ def calculate_slp(mode, schema, table):
 
     # get engine for database connection
     conn = db.connection(db_section='oedb')
-
+    
+    # dummy annual demand data in GWh/a
+    dummy_demand = {'residential': 0,
+                    'retail': 0.001,
+                    'industrial': 0,
+                    'agricultural': 0}
+    # define data year
+    # TODO: in the future get this from somewhere else                    
+    year = 2015
+                    
+    # initiate demandlib instances
+    bel = Bus(uid="bel",
+              type="el",
+              excess=True)
+    
+    demand = sink.Simple(uid="demand", inputs=[bel])
+    helpers.call_demandlib(demand,
+                           method='calculate_profile',
+                           year=year,
+                           ann_el_demand_per_sector=[
+                                {'ann_el_demand': (
+                                    dummy_demand['residential'] * 1e6),
+                                 'selp_type': 'h0'},
+                                {'ann_el_demand': dummy_demand['retail'] * 1e6,
+                                 'selp_type': 'g0'},
+                                {'ann_el_demand': (
+                                    dummy_demand['industrial'] * 1e6),
+                                 'selp_type': 'i0'}])
+                                 
+    print(demand.val.loc['2015-01-13'], demand.val.sum())
+#    demand.val.loc['2015-01-13'].to_csv('slp_20150113.csv')
+    
     # different modi are foreseen
     # a) lastgebiete: iterate over whole table, calucalate slp for each row
     # (a row represents a lastgebiet) and write new results table with lgid as
@@ -39,40 +70,16 @@ def calculate_slp(mode, schema, table):
     # b) calculate slp for a specific location based on
     #  i) geo location (lat, lon)
     #  ii) nuts code or similar
+    
+    # TODO: will be used when annual power demand is in database table
     if mode == 'lastgebiete':
+        
         # retrieve table with processed input data
         input_table = pd.read_sql_table(table, conn, schema=schema)
-        print(input_table)
     
         year = 2011
 
 
-
-#    ann_el_demand_per_sector = [
-#        {'ann_el_demand': 1000,
-#         'selp_type': 'h0'},
-#        {'ann_el_demand': 0,
-#         'selp_type': 'g0'},
-#        {'ann_el_demand': 0,
-#         'selp_type': 'i0'}]
-#    
-#    # ############################################################################
-#    # Create demand object and relevant bus
-#    # ############################################################################
-#    
-#    # Example 1: Calculate profile with annual electric demand per sector is known
-#    
-#    bel = Bus(uid="bel",
-#              type="el",
-#              excess=True)
-#    
-#    demand = sink.Simple(uid="demand", inputs=[bel])
-#    helpers.call_demandlib(demand,
-#                           method='calculate_profile',
-#                           year=year,
-#                           ann_el_demand_per_sector=ann_el_demand_per_sector)
-#    
-#    #print(demand.val, demand.val.sum())
 
 if __name__ == '__main__':
     # welcome message
