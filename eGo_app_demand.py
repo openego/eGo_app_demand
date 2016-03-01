@@ -13,7 +13,21 @@ import argparse
 
 
 def calculate_slp(mode, schema, table):
-    '''Calculates SLP based on input data from oedb'''
+    r"""Calculates SLP based on input data from oedb
+
+    The demandlib of oemof is applied to retrieve demand time-series based on
+    standdard demand profiles
+    
+    Parameters
+    ----------
+    mode : 'lastgebiete', str
+        Declares modus that is used (currently only one available)
+    schema : {'calc_demand'}, str, optional
+        Database schema where table containing intermediate resutls is located
+    table : {'osm_deu_polygon_lastgebiet_100_spf'}
+        Database table with intermediate resutls
+    
+    """
 
     # get engine for database connection
     conn = db.connection(db_section='oedb')
