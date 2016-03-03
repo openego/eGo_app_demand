@@ -6,13 +6,131 @@ logging.getLogger().setLevel(logging.WARNING)
 
 from oemof.core.network.entities import Bus
 from oemof.core.network.entities.components import sinks as sink
-from oemof.tools import helpers
 from oemof import db
 import pandas as pd
 import argparse
+from oemof.demandlib import demand as dm
+import numpy as np
 
 
-def calculate_slp(mode, schema, table):
+def get_load_areas_table(schema, table, columns=None):
+    r"""Retrieve load areas intermediate results table from oedb
+    """
+    # get engine for database connection
+    conn = db.connection(db_section='oedb')
+    
+    # retrieve table with processed input data
+    input_table = pd.read_sql_table(table, conn, schema=schema,
+                                    index_col='oid', columns=columns)
+    
+    return input_table
+    
+    
+def normalized_random_sectoral_shares(seed, **kwargs):
+    r"""Create list of floats
+    """
+    # create list of random ints with size of 'size'
+    int_list = np.random.choice(seed * 11, kwargs['size'])
+    
+    # b is normalized list of a
+    float_list = (int_list / np.sum(int_list)) * kwargs['overall_demand']
+    
+    return float_list
+    
+    
+def fill_table_by_random_consuption(load_areas, size=3, overall_demand=1e5):
+    r"""Generates sectoral consumption columns
+    
+    Adds three columns each for sectors of
+    
+    * residential
+    * retail
+    * industrial.
+    
+    Based on overall defined demand random consumption is determined.
+    """
+    column_list = ['sector_consumption_residential',
+                  'sector_consumption_retail',
+                  'sector_consumption_industrial']
+                  
+    load_areas = pd.concat(
+        [load_areas,pd.DataFrame(columns=column_list)])
+
+    float_list = pd.Series(load_areas.reset_index()['oid'].apply(
+        normalized_random_sectoral_shares,
+        **{'size': size, 'overall_demand': overall_demand}
+        ).values, index=load_areas.index)
+
+    load_areas.loc[:, column_list] = float_list.tolist()
+        
+    return load_areas
+    
+    
+def add_sectoral_peak_load(load_areas, **kwargs):
+    r"""Add peak load per sector based on given annual consumption
+    """
+    
+    # define data year
+    # TODO: in the future get this from somewhere else                    
+    year = 2015
+                    
+    # initiate demandlib (and other necessary) instances
+    bel = Bus(uid="bel",
+              type="el",
+              excess=True)
+    
+    demand = sink.Simple(uid="demand", inputs=[bel])
+    
+    # call demandlib
+    # TODO: make this nicer when sectoral demand timeseries returns are
+    # implemented in demandlib
+    if kwargs['sector'] is 'residential':
+        peak_load = dm.electrical_demand(method='calculate_profile',
+                                          year=year,
+                                          ann_el_demand_per_sector=[
+                                          {'ann_el_demand': (
+                                          load_areas['sector_consumption_residential']),
+                                          'selp_type': 'h0'},
+                                          {'ann_el_demand': (
+                                          0),
+                                          'selp_type': 'g0'},
+                                          {'ann_el_demand': (
+                                          0),
+                                         'selp_type': 'i0'}]).elec_demand.max()
+    elif kwargs['sector'] is 'retail':
+        peak_load = dm.electrical_demand(method='calculate_profile',
+                                          year=year,
+                                          ann_el_demand_per_sector=[
+                                          {'ann_el_demand': (
+                                          0),
+                                          'selp_type': 'h0'},
+                                          {'ann_el_demand': (
+                                          load_areas['sector_consumption_retail']),
+                                          'selp_type': 'g0'},
+                                          {'ann_el_demand': (
+                                          0),
+                                         'selp_type': 'i0'}]).elec_demand.max()
+                                         
+    elif kwargs['sector'] is 'industrial':
+        peak_load = dm.electrical_demand(method='calculate_profile',
+                                          year=year,
+                                          ann_el_demand_per_sector=[
+                                          {'ann_el_demand': (
+                                          0),
+                                          'selp_type': 'h0'},
+                                          {'ann_el_demand': (
+                                          0),
+                                          'selp_type': 'g0'},
+                                          {'ann_el_demand': (
+                                          load_areas['sector_consumption_industrial']),
+                                         'selp_type': 'i0'}]).elec_demand.max()
+    else:
+        raise KeyError('Wrong key provided.')
+                                     
+    return peak_load
+    
+
+def peak_load_table(schema, table, target_table, dummy):
     r"""Calculates SLP based on input data from oedb
 
     The demandlib of oemof is applied to retrieve demand time-series based on
@@ -28,73 +146,61 @@ def calculate_slp(mode, schema, table):
         Database table with intermediate resutls
     
     """
+    
+    if dummy is True:
+        # retrieve load areas table
+        load_areas = get_load_areas_table(schema, table, columns=['oid'])
+        
+        # fill missing consumption data by random values
+        load_areas = fill_table_by_random_consuption(load_areas)
+    else:
+        # retrieve load areas table
+        columns = ['oid',
+                   'sector_consumption_residential',
+                   'sector_consumption_retail',
+                   'sector_consumption_industrial',
+                   'sector_consumption_agricultural']
 
-    # get engine for database connection
+        load_areas = get_load_areas_table(schema, table, columns=columns)
+
+    # add sectoral peak load columns
+    load_areas['peak_load_retail'] = load_areas.apply(
+        add_sectoral_peak_load, axis=1, **{'sector': 'retail'})
+    load_areas['peak_load_residential'] = load_areas.apply(
+        add_sectoral_peak_load, axis=1, **{'sector': 'residential'})
+    load_areas['peak_load_industrial'] = load_areas.apply(
+        add_sectoral_peak_load, axis=1, **{'sector': 'industrial'})
+    
+    # derive resulting table from load_areas dataframe
+    results_table = load_areas[['peak_load_residential',
+                  'peak_load_retail',
+                  'peak_load_industrial']].reset_index()
+                  
+    # write results to new database table
     conn = db.connection(db_section='oedb')
-    
-    # dummy annual demand data in GWh/a
-    dummy_demand = {'residential': 0,
-                    'retail': 0.001,
-                    'industrial': 0,
-                    'agricultural': 0}
-    # define data year
-    # TODO: in the future get this from somewhere else                    
-    year = 2015
-                    
-    # initiate demandlib instances
-    bel = Bus(uid="bel",
-              type="el",
-              excess=True)
-    
-    demand = sink.Simple(uid="demand", inputs=[bel])
-    
-    # TODO: iterate over rows of input table and over demand type (go, h0,...)
-    # maybe implement this with the help of pandas apply() to avoid for loops
-    helpers.call_demandlib(demand,
-                           method='calculate_profile',
-                           year=year,
-                           ann_el_demand_per_sector=[
-                                {'ann_el_demand': (
-                                    dummy_demand['residential'] * 1e6),
-                                 'selp_type': 'h0'},
-                                {'ann_el_demand': dummy_demand['retail'] * 1e6,
-                                 'selp_type': 'g0'},
-                                {'ann_el_demand': (
-                                    dummy_demand['industrial'] * 1e6),
-                                 'selp_type': 'i0'}])
+    if target_table == None:
+        target_table = table.replace('lastgebiet', 'peak_load')
 
-    print(demand.val.loc['2015-01-13'], demand.val.sum())
-
-        
+    results_table.to_sql(target_table,
+                         conn,
+                         schema=schema)
     
-    # TODO: will be used when annual power demand is in database table
-    # different modi are foreseen
-    # a) lastgebiete: iterate over whole table, calucalate slp for each row
-    # (a row represents a lastgebiet) and write new results table with lgid as
-    # foreign key for reference
-    # b) calculate slp for a specific location based on
-    #  i) geo location (lat, lon)
-    #  ii) nuts code or similar
-    if mode == 'lastgebiete':
-        
-        # retrieve table with processed input data
-        input_table = pd.read_sql_table(table, conn, schema=schema)
-    
-        year = 2011
-
-
-
 if __name__ == '__main__':
+
     # welcome message
     parser = argparse.ArgumentParser(description='This is the demandlib ' +
         'applied in the open_eGo project.')
-    
-    parser.add_argument('mode', help='Currently only "lastgebiete" is a  ' +
-        'input!')
+
     parser.add_argument('-t', '--table', nargs=1, help='Database table ' +
         'with input data', default='osm_deu_polygon_lastgebiet_100_spf')
     parser.add_argument('-s', '--schema', nargs=1, help='Database schema',
                         default='calc_demand')
+    parser.add_argument('-tt', '--target-table', nargs=1, help='Database ' +
+        'table for results data containing peak loads', default=None)
+    parser.add_argument('--dummy', dest='dummy', action='store_true',
+                        help='If set, dummy data is applied to annual ' +
+                        'consumption.', default=False)
     args = parser.parse_args()
     
-    calculate_slp(args.mode, args.schema, args.table)
+    
+    peak_load_table(args.schema, args.table, args.target_table, args.dummy)
