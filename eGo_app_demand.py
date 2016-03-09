@@ -19,7 +19,7 @@ def get_load_areas_table(schema, table, columns=None):
     
     # retrieve table with processed input data
     input_table = pd.read_sql_table(table, conn, schema=schema,
-                                    index_col='oid', columns=columns)
+                                    index_col='lgid', columns=columns)
     
     return input_table
     
@@ -54,7 +54,7 @@ def fill_table_by_random_consuption(load_areas, size=3, overall_demand=1e5):
     load_areas = pd.concat(
         [load_areas,pd.DataFrame(columns=column_list)])
 
-    float_list = pd.Series(load_areas.reset_index()['oid'].apply(
+    float_list = pd.Series(load_areas.reset_index()['lgid'].apply(
         normalized_random_sectoral_shares,
         **{'size': size, 'overall_demand': overall_demand}
         ).values, index=load_areas.index)
@@ -140,13 +140,13 @@ def peak_load_table(schema, table, target_table, dummy):
     
     if dummy is True:
         # retrieve load areas table
-        load_areas = get_load_areas_table(schema, table, columns=['oid'])
+        load_areas = get_load_areas_table(schema, table, columns=['lgid'])
         
         # fill missing consumption data by random values
         load_areas = fill_table_by_random_consuption(load_areas)
     else:
         # retrieve load areas table
-        columns = ['oid',
+        columns = ['lgid',
                    'sector_consumption_residential',
                    'sector_consumption_retail',
                    'sector_consumption_industrial',
@@ -170,7 +170,7 @@ def peak_load_table(schema, table, target_table, dummy):
     # write results to new database table
     conn = db.connection(db_section='oedb')
     if target_table == None:
-        target_table = table.replace('lastgebiet', 'peak_load')
+        target_table = table.replace('lastgebiete', 'peak_load')
 
     results_table.to_sql(target_table,
                          conn,
@@ -183,9 +183,9 @@ if __name__ == '__main__':
         'applied in the open_eGo project.')
 
     parser.add_argument('-t', '--table', nargs=1, help='Database table ' +
-        'with input data', default='osm_deu_polygon_lastgebiet_100_spf')
+        'with input data', default='rli_deu_lastgebiete')
     parser.add_argument('-s', '--schema', nargs=1, help='Database schema',
-                        default='calc_demand')
+                        default='orig_geo_rli')
     parser.add_argument('-tt', '--target-table', nargs=1, help='Database ' +
         'table for results data containing peak loads', default=None)
     parser.add_argument('--dummy', dest='dummy', action='store_true',
