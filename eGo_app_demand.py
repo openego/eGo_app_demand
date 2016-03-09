@@ -4,8 +4,6 @@
 import logging
 logging.getLogger().setLevel(logging.WARNING)
 
-from oemof.core.network.entities import Bus
-from oemof.core.network.entities.components import sinks as sink
 from oemof import db
 import pandas as pd
 import argparse
@@ -74,13 +72,6 @@ def add_sectoral_peak_load(load_areas, **kwargs):
     # TODO: in the future get this from somewhere else                    
     year = 2015
                     
-    # initiate demandlib (and other necessary) instances
-    bel = Bus(uid="bel",
-              type="el",
-              excess=True)
-    
-    demand = sink.Simple(uid="demand", inputs=[bel])
-    
     # call demandlib
     # TODO: make this nicer when sectoral demand timeseries returns are
     # implemented in demandlib
