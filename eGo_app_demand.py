@@ -67,57 +67,23 @@ def fill_table_by_random_consuption(load_areas, size=3, overall_demand=1e5):
 def add_sectoral_peak_load(load_areas, **kwargs):
     r"""Add peak load per sector based on given annual consumption
     """
-    
+
     # define data year
     # TODO: in the future get this from somewhere else                    
     year = 2015
-                    
+
     # call demandlib
-    # TODO: make this nicer when sectoral demand timeseries returns are
-    # implemented in demandlib
-    if kwargs['sector'] is 'residential':
-        peak_load = dm.electrical_demand(method='calculate_profile',
-                                          year=year,
-                                          ann_el_demand_per_sector=[
-                                          {'ann_el_demand': (
-                                          load_areas['sector_consumption_residential']),
-                                          'selp_type': 'h0'},
-                                          {'ann_el_demand': (
-                                          0),
-                                          'selp_type': 'g0'},
-                                          {'ann_el_demand': (
-                                          0),
-                                         'selp_type': 'i0'}]).elec_demand.max()
-    elif kwargs['sector'] is 'retail':
-        peak_load = dm.electrical_demand(method='calculate_profile',
-                                          year=year,
-                                          ann_el_demand_per_sector=[
-                                          {'ann_el_demand': (
-                                          0),
-                                          'selp_type': 'h0'},
-                                          {'ann_el_demand': (
-                                          load_areas['sector_consumption_retail']),
-                                          'selp_type': 'g0'},
-                                          {'ann_el_demand': (
-                                          0),
-                                         'selp_type': 'i0'}]).elec_demand.max()
-                                         
-    elif kwargs['sector'] is 'industrial':
-        peak_load = dm.electrical_demand(method='calculate_profile',
-                                          year=year,
-                                          ann_el_demand_per_sector=[
-                                          {'ann_el_demand': (
-                                          0),
-                                          'selp_type': 'h0'},
-                                          {'ann_el_demand': (
-                                          0),
-                                          'selp_type': 'g0'},
-                                          {'ann_el_demand': (
-                                          load_areas['sector_consumption_industrial']),
-                                         'selp_type': 'i0'}]).elec_demand.max()
-    else:
-        raise KeyError('Wrong key provided.')
-                                     
+    peak_load = dm.electrical_demand(method='calculate_profile',
+                                     year=year,
+                                     ann_el_demand_per_sector= {
+                                         'h0':
+                                             load_areas['sector_consumption_residential'],
+                                         'g0':
+                                             load_areas['sector_consumption_retail'],
+                                         'i0':
+                                             load_areas['sector_consumption_residential']}
+                                        ).elec_demand.max(axis=0)
+
     return peak_load
     
 
@@ -155,17 +121,11 @@ def peak_load_table(schema, table, target_table, dummy):
         load_areas = get_load_areas_table(schema, table, columns=columns)
 
     # add sectoral peak load columns
-    load_areas['peak_load_retail'] = load_areas.apply(
-        add_sectoral_peak_load, axis=1, **{'sector': 'retail'})
-    load_areas['peak_load_residential'] = load_areas.apply(
-        add_sectoral_peak_load, axis=1, **{'sector': 'residential'})
-    load_areas['peak_load_industrial'] = load_areas.apply(
-        add_sectoral_peak_load, axis=1, **{'sector': 'industrial'})
-    
-    # derive resulting table from load_areas dataframe
-    results_table = load_areas[['peak_load_residential',
-                  'peak_load_retail',
-                  'peak_load_industrial']].reset_index()
+    peak_demand = load_areas.apply(
+        add_sectoral_peak_load, axis=1)
+
+    # derive resulting table from peak_demand dataframe
+    results_table = peak_demand.reset_index()
                   
     # write results to new database table
     conn = db.connection(db_section='oedb')
@@ -175,6 +135,17 @@ def peak_load_table(schema, table, target_table, dummy):
     results_table.to_sql(target_table,
                          conn,
                          schema=schema)
+
+    # Ludwigs vorgehen:
+    # a) leere Tabelle anlegen mit id spalte (type serial)
+    # b) PK constraint erstellen
+    # c) rechte anpassen
+    # TODO: PK setzen mit folgendem Beispiel
+    # ALTER TABLE orig_geo_rli_spf.rli_deu_lastgebiete_spf
+    # ADD CONSTRAINT rli_deu_lastgebiete_spf_pkey PRIMARY KEY(lgid);
+
+    # TODO: rechte setzen für oeuser gruppe
+    # GRANT ALL ON TABLE orig_geo_rli_spf.rli_deu_lastgebiete_spf TO oeuser WITH GRANT OPTION;
     
 if __name__ == '__main__':
 
