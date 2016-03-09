@@ -192,6 +192,13 @@ if __name__ == '__main__':
                         help='If set, dummy data is applied to annual ' +
                         'consumption.', default=False)
     args = parser.parse_args()
+
+    # unpack lists
+    if isinstance(args.schema, list):
+        args.schema = args.schema[0]
+
+    if isinstance(args.table, list):
+        args.table = args.table[0]
     
     
     peak_load_table(args.schema, args.table, args.target_table, args.dummy)
