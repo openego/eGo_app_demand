@@ -15,7 +15,7 @@ def get_load_areas_table(schema, table, columns=None):
     r"""Retrieve load areas intermediate results table from oedb
     """
     # get engine for database connection
-    conn = db.connection(db_section='oedb')
+    conn = db.connection(section='oedb')
     
     # retrieve table with processed input data
     input_table = pd.read_sql_table(table, conn, schema=schema,
@@ -128,7 +128,7 @@ def peak_load_table(schema, table, target_table, dummy):
     results_table = peak_demand.reset_index()
                   
     # write results to new database table
-    conn = db.connection(db_section='oedb')
+    conn = db.connection(section='oedb')
     if target_table == None:
         target_table = table.replace('lastgebiete', 'peak_load')
 
