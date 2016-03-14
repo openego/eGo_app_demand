@@ -121,8 +121,12 @@ def peak_load_table(schema, table, target_table, dummy):
         load_areas = get_load_areas_table(schema, table, columns=columns)
 
     # add sectoral peak load columns
-    peak_demand = load_areas.apply(
+    if dummy is True:
+        peak_demand = load_areas.iloc[:5].apply(
         add_sectoral_peak_load, axis=1)
+    else:
+        peak_demand = load_areas.apply(
+            add_sectoral_peak_load, axis=1)
 
     # derive resulting table from peak_demand dataframe
     results_table = peak_demand.reset_index()
