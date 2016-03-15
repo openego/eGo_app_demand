@@ -9,6 +9,7 @@ import pandas as pd
 import argparse
 from oemof.demandlib import demand as dm
 import numpy as np
+from oemof.db import tools
 
 
 def get_load_areas_table(schema, table, columns=None):
@@ -103,11 +104,11 @@ def peak_load_table(schema, table, target_table, dummy):
         Database table with intermediate resutls
     
     """
-    
+
     if dummy is True:
         # retrieve load areas table
         load_areas = get_load_areas_table(schema, table, columns=['lgid'])
-        
+
         # fill missing consumption data by random values
         load_areas = fill_table_by_random_consuption(load_areas)
     else:
@@ -130,12 +131,17 @@ def peak_load_table(schema, table, target_table, dummy):
 
     # derive resulting table from peak_demand dataframe
     results_table = peak_demand.reset_index()
-                  
-    # write results to new database table
+
+    # establish database connection
     conn = db.connection(section='oedb')
     if target_table == None:
         target_table = table.replace('lastgebiete', 'peak_load')
 
+    # create empty table with serial primary key
+    # TODO: remove dummies
+    tools.create_empty_table_serial_primary(conn, schema, target_table, columns=list(results_table.columns.values))
+
+    # write results to new database table
     results_table.to_sql(target_table,
                          conn,
                          schema=schema)
