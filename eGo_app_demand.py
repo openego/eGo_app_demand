@@ -12,15 +12,15 @@ import numpy as np
 from oemof.db import tools
 
 
-def get_load_areas_table(schema, table, columns=None):
+def get_load_areas_table(schema, table, index_col, section, columns=None):
     r"""Retrieve load areas intermediate results table from oedb
     """
     # get engine for database connection
-    conn = db.connection(section='oedb')
+    conn = db.connection(section=section)
     
     # retrieve table with processed input data
     input_table = pd.read_sql_table(table, conn, schema=schema,
-                                    index_col='lgid', columns=columns)
+                                    index_col=index_col, columns=columns)
     
     return input_table
     
@@ -37,7 +37,7 @@ def normalized_random_sectoral_shares(seed, **kwargs):
     return float_list
     
     
-def fill_table_by_random_consuption(load_areas, size=3, overall_demand=1e5):
+def fill_table_by_random_consuption(load_areas, index_col, size=3, overall_demand=1e5):
     r"""Generates sectoral consumption columns
     
     Adds three columns each for sectors of
@@ -88,7 +88,8 @@ def add_sectoral_peak_load(load_areas, **kwargs):
     return peak_load
     
 
-def peak_load_table(schema, table, target_table, dummy):
+def peak_load_table(schema, table, target_table, section, index_col, db_group,
+                    dummy):
     r"""Calculates SLP based on input data from oedb
 
     The demandlib of oemof is applied to retrieve demand time-series based on
@@ -107,13 +108,14 @@ def peak_load_table(schema, table, target_table, dummy):
 
     if dummy is True:
         # retrieve load areas table
-        load_areas = get_load_areas_table(schema, table, columns=['lgid'])
+        load_areas = get_load_areas_table(schema, table, index_col, section,
+                                          columns=index_col)
 
         # fill missing consumption data by random values
-        load_areas = fill_table_by_random_consuption(load_areas)
+        load_areas = fill_table_by_random_consuption(load_areas, index_col)
     else:
         # retrieve load areas table
-        columns = ['lgid',
+        columns = [index_col,
                    'sector_consumption_residential',
                    'sector_consumption_retail',
                    'sector_consumption_industrial',
@@ -133,10 +135,12 @@ def peak_load_table(schema, table, target_table, dummy):
     results_table = peak_demand.reset_index()
 
     # establish database connection
-    conn = db.connection(section='oedb')
+    conn = db.connection(section=section)
 
     # create empty table with serial primary key
-    tools.create_empty_table_serial_primary(conn, schema, target_table, columns=list(results_table.columns.values))
+    tools.create_empty_table_serial_primary(conn, schema, target_table,
+                                            columns=list(
+                                                results_table.columns.values))
 
     # write results to new database table
     results_table.to_sql(target_table,
@@ -145,7 +149,7 @@ def peak_load_table(schema, table, target_table, dummy):
                          index=False,
                          if_exists='append')
 
-    tools.grant_db_access(conn, schema, target_table, 'oeuser')
+    tools.grant_db_access(conn, schema, target_table, db_group)
 
 
 if __name__ == '__main__':
@@ -161,6 +165,15 @@ if __name__ == '__main__':
     parser.add_argument('-tt', '--target-table', nargs=1, help='Database ' +
         'table for results data containing peak loads',
                         default='rl_deu_peak_load_spf')
+    parser.add_argument('-ds', '--database-section', nargs=1, help='Section ' +
+        'in `config.ini` containing database details',
+                        default='oedb')
+    parser.add_argument('-icol', '--index-column', nargs=1, help='Annual ' +
+        'consumption data table index column',
+                        default='la_id')
+    parser.add_argument('-g', '--db-group', nargs=1, help='Database ' +
+        'user group that rights are granted to',
+                        default='oeuser')
     parser.add_argument('--dummy', dest='dummy', action='store_true',
                         help='If set, dummy data is applied to annual ' +
                         'consumption.', default=False)
@@ -174,4 +187,10 @@ if __name__ == '__main__':
         args.table = args.table[0]
     
     
-    peak_load_table(args.schema, args.table, args.target_table, args.dummy)
+    peak_load_table(args.schema,
+                    args.table,
+                    args.target_table,
+                    args.database_section,
+                    args.index_column,
+                    args.db_group,
+                    args.dummy)
