@@ -136,7 +136,6 @@ def peak_load_table(schema, table, target_table, dummy):
     conn = db.connection(section='oedb')
 
     # create empty table with serial primary key
-    # TODO: remove dummies
     tools.create_empty_table_serial_primary(conn, schema, target_table, columns=list(results_table.columns.values))
 
     # write results to new database table
