@@ -134,8 +134,6 @@ def peak_load_table(schema, table, target_table, dummy):
 
     # establish database connection
     conn = db.connection(section='oedb')
-    if target_table == None:
-        target_table = table.replace('lastgebiete', 'peak_load')
 
     # create empty table with serial primary key
     # TODO: remove dummies
@@ -162,7 +160,8 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--schema', nargs=1, help='Database schema',
                         default='orig_geo_rli')
     parser.add_argument('-tt', '--target-table', nargs=1, help='Database ' +
-        'table for results data containing peak loads', default=None)
+        'table for results data containing peak loads',
+                        default='rl_deu_peak_load_spf')
     parser.add_argument('--dummy', dest='dummy', action='store_true',
                         help='If set, dummy data is applied to annual ' +
                         'consumption.', default=False)
