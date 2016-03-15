@@ -123,7 +123,7 @@ def peak_load_table(schema, table, target_table, dummy):
     # add sectoral peak load columns
     if dummy is True:
         peak_demand = load_areas.iloc[:5].apply(
-        add_sectoral_peak_load, axis=1)
+            add_sectoral_peak_load, axis=1)
     else:
         peak_demand = load_areas.apply(
             add_sectoral_peak_load, axis=1)
