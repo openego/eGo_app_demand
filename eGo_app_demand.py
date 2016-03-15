@@ -144,19 +144,13 @@ def peak_load_table(schema, table, target_table, dummy):
     # write results to new database table
     results_table.to_sql(target_table,
                          conn,
-                         schema=schema)
+                         schema=schema,
+                         index=False,
+                         if_exists='append')
 
-    # Ludwigs vorgehen:
-    # a) leere Tabelle anlegen mit id spalte (type serial)
-    # b) PK constraint erstellen
-    # c) rechte anpassen
-    # TODO: PK setzen mit folgendem Beispiel
-    # ALTER TABLE orig_geo_rli_spf.rli_deu_lastgebiete_spf
-    # ADD CONSTRAINT rli_deu_lastgebiete_spf_pkey PRIMARY KEY(lgid);
+    tools.grant_db_access(conn, schema, target_table, 'oeuser')
 
-    # TODO: rechte setzen für oeuser gruppe
-    # GRANT ALL ON TABLE orig_geo_rli_spf.rli_deu_lastgebiete_spf TO oeuser WITH GRANT OPTION;
-    
+
 if __name__ == '__main__':
 
     # welcome message
