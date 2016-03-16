@@ -17,7 +17,7 @@ def get_load_areas_table(schema, table, index_col, section, columns=None):
     """
     # get engine for database connection
     conn = db.connection(section=section)
-    
+
     # retrieve table with processed input data
     input_table = pd.read_sql_table(table, conn, schema=schema,
                                     index_col=index_col, columns=columns)
@@ -55,7 +55,7 @@ def fill_table_by_random_consuption(load_areas, index_col, size=3, overall_deman
     load_areas = pd.concat(
         [load_areas,pd.DataFrame(columns=column_list)])
 
-    float_list = pd.Series(load_areas.reset_index()['lgid'].apply(
+    float_list = pd.Series(load_areas.reset_index()[index_col].apply(
         normalized_random_sectoral_shares,
         **{'size': size, 'overall_demand': overall_demand}
         ).values, index=load_areas.index)
@@ -88,7 +88,7 @@ def add_sectoral_peak_load(load_areas, **kwargs):
     return peak_load
     
 
-def peak_load_table(schema, table, target_table, section, index_col, db_group,
+def peak_load_table(mode, schema, table, target_table, section, index_col, db_group,
                     dummy):
     r"""Calculates SLP based on input data from oedb
 
@@ -109,7 +109,7 @@ def peak_load_table(schema, table, target_table, section, index_col, db_group,
     if dummy is True:
         # retrieve load areas table
         load_areas = get_load_areas_table(schema, table, index_col, section,
-                                          columns=index_col)
+                                          columns=[index_col])
 
         # fill missing consumption data by random values
         load_areas = fill_table_by_random_consuption(load_areas, index_col)
@@ -121,7 +121,8 @@ def peak_load_table(schema, table, target_table, section, index_col, db_group,
                    'sector_consumption_industrial',
                    'sector_consumption_agricultural']
 
-        load_areas = get_load_areas_table(schema, table, columns=columns)
+        load_areas = get_load_areas_table(schema, table, index_col, section,
+                                          columns=columns)
 
     # add sectoral peak load columns
     if dummy is True:
@@ -132,22 +133,22 @@ def peak_load_table(schema, table, target_table, section, index_col, db_group,
             add_sectoral_peak_load, axis=1)
 
     # derive resulting table from peak_demand dataframe
-    results_table = peak_demand.reset_index()
+    results_table = peak_demand
 
     # establish database connection
     conn = db.connection(section=section)
 
-    # create empty table with serial primary key
-    tools.create_empty_table_serial_primary(conn, schema, target_table,
-                                            columns=list(
-                                                results_table.columns.values))
+    # # create empty table with serial primary key
+    # tools.create_empty_table_serial_primary(conn, schema, target_table,
+    #                                         columns=list(
+    #                                             results_table.columns.values))
 
     # write results to new database table
     results_table.to_sql(target_table,
                          conn,
                          schema=schema,
-                         index=False,
-                         if_exists='append')
+                         index=True,
+                         if_exists='fail')
 
     tools.grant_db_access(conn, schema, target_table, db_group)
 
