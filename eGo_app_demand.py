@@ -165,7 +165,7 @@ if __name__ == '__main__':
                         default='orig_geo_rli')
     parser.add_argument('-tt', '--target-table', nargs=1, help='Database ' +
         'table for results data containing peak loads',
-                        default='rl_deu_peak_load_spf')
+                        default='rli_deu_peak_load_spf')
     parser.add_argument('-ds', '--database-section', nargs=1, help='Section ' +
         'in `config.ini` containing database details',
                         default='oedb')
