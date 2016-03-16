@@ -156,6 +156,7 @@ def peak_load_table(mode, schema, table, target_table, section, index_col, db_gr
 
     # rename column names
     results_table = results_table.rename(columns=columns_names)
+
     # write results to new database table
     results_table.to_sql(target_table,
                          conn,
@@ -163,7 +164,14 @@ def peak_load_table(mode, schema, table, target_table, section, index_col, db_gr
                          index=True,
                          if_exists='fail')
 
+    # grant access to db_group
     tools.grant_db_access(conn, schema, target_table, db_group)
+
+    # change owner of table to db_group
+    tools.change_owner_to(conn, schema, target_table, db_group)
+
+    # add primary key constraint on id column
+    tools.add_primary_key(conn, schema, target_table, index_col)
 
 
 if __name__ == '__main__':
