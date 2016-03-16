@@ -11,8 +11,14 @@ An example to generate a new database table containing peak demands for defined
 load areas is
 
 ```
-./eGo_app_demand.py -t rli_deu_lastgebiete_spf -s orig_geo_rli_spf -icol lgid
- --dummy
+./eGo_app_demand.py peak_load
+```
+
+if this should only by done for the test area Swabia (Bavaria) call the app as
+follows
+
+```
+./eGo_app_demand.py peak_load -t rli_deu_loadarea_spf
 ```
 
 or call
