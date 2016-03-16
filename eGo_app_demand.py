@@ -157,7 +157,8 @@ if __name__ == '__main__':
 
     # welcome message
     parser = argparse.ArgumentParser(description='This is the demandlib ' +
-        'applied in the open_eGo project.')
+        'applied in the open_eGo project.' +
+        'The demandlib founds on Standard Lastprofile of the BDEW.')
 
     parser.add_argument('mode', help='Selects mode of using `eGo_app_demand`.' +
                         'Select `peak_load` to obtain scalar peak demand of ' +
