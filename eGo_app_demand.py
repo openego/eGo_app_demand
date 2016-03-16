@@ -97,8 +97,8 @@ def peak_load_table(mode, schema, table, target_table, section, index_col, db_gr
     
     Parameters
     ----------
-    mode : 'lastgebiete', str
-        Declares modus that is used (currently only one available)
+    mode : {'peak_load', 'timeseries'}, str
+        Declares modus that is used
     schema : {'calc_demand'}, str, optional
         Database schema where table containing intermediate resutls is located
     table : {'osm_deu_polygon_lastgebiet_100_spf'}
@@ -159,6 +159,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This is the demandlib ' +
         'applied in the open_eGo project.')
 
+    parser.add_argument('mode', help='Selects mode of using `eGo_app_demand`.' +
+                        'Select `peak_load` to obtain scalar peak demand of ' +
+                        'a year.' +
+                        'Choose `timeseries` to get a full timeseries in ' +
+                        'temporal resolution of one hourly.')
     parser.add_argument('-t', '--table', nargs=1, help='Database table ' +
         'with input data', default='rli_deu_lastgebiete')
     parser.add_argument('-s', '--schema', nargs=1, help='Database schema',
@@ -186,12 +191,21 @@ if __name__ == '__main__':
 
     if isinstance(args.table, list):
         args.table = args.table[0]
-    
-    
-    peak_load_table(args.schema,
-                    args.table,
-                    args.target_table,
-                    args.database_section,
-                    args.index_column,
-                    args.db_group,
-                    args.dummy)
+
+    if isinstance(args.index_column, list):
+        args.index_column = args.index_column[0]
+
+    if args.mode == 'peak_load':
+        peak_load_table(args.mode,
+                        args.schema,
+                        args.table,
+                        args.target_table,
+                        args.database_section,
+                        args.index_column,
+                        args.db_group,
+                        args.dummy)
+    elif args.mode == 'timeseries':
+        timeseries_table()
+    else:
+        raise NameError('Wrong mode provided. Use `./eGo_app_demand.py -h ' +
+                        'to get some help.')
