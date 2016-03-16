@@ -50,7 +50,8 @@ def fill_table_by_random_consuption(load_areas, index_col, size=3, overall_deman
     """
     column_list = ['sector_consumption_residential',
                   'sector_consumption_retail',
-                  'sector_consumption_industrial']
+                  'sector_consumption_industrial',
+                   'sector_consumption_agricultural']
                   
     load_areas = pd.concat(
         [load_areas,pd.DataFrame(columns=column_list)])
@@ -82,7 +83,9 @@ def add_sectoral_peak_load(load_areas, **kwargs):
                                          'g0':
                                              load_areas['sector_consumption_retail'],
                                          'i0':
-                                             load_areas['sector_consumption_residential']}
+                                             load_areas['sector_consumption_residential'],
+                                        'l0':
+                                            load_areas['sector_consumption_agricultural']}
                                         ).elec_demand.max(axis=0)
 
     return peak_load
