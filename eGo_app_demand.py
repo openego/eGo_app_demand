@@ -106,8 +106,16 @@ def peak_load_table(mode, schema, table, target_table, section, index_col, db_gr
         Database schema where table containing intermediate resutls is located
     table : {'osm_deu_polygon_lastgebiet_100_spf'}
         Database table with intermediate resutls
+
+    Notes
+    -----
+    Column names of resulting table are set to hard-coded.
     
     """
+    columns_names = {'h0': 'residential',
+                     'g0': 'retail',
+                     'i0': 'industrial',
+                     'l0': 'agricultural'}
 
     if dummy is True:
         # retrieve load areas table
@@ -146,6 +154,8 @@ def peak_load_table(mode, schema, table, target_table, section, index_col, db_gr
     #                                         columns=list(
     #                                             results_table.columns.values))
 
+    # rename column names
+    results_table = results_table.rename(columns=columns_names)
     # write results to new database table
     results_table.to_sql(target_table,
                          conn,
