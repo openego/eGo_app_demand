@@ -66,7 +66,7 @@ def fill_table_by_random_consuption(load_areas, index_col, size=3, overall_deman
     return load_areas
     
     
-def add_sectoral_peak_load(load_areas, **kwargs):
+def add_sectoral_peak_load(load_areas, mode, **kwargs):
     r"""Add peak load per sector based on given annual consumption
     """
 
@@ -75,7 +75,7 @@ def add_sectoral_peak_load(load_areas, **kwargs):
     year = 2015
 
     # call demandlib
-    peak_load = dm.electrical_demand(method='calculate_profile',
+    tmp_peak_load = dm.electrical_demand(method='calculate_profile',
                                      year=year,
                                      ann_el_demand_per_sector= {
                                          'h0':
@@ -86,7 +86,12 @@ def add_sectoral_peak_load(load_areas, **kwargs):
                                              load_areas['sector_consumption_residential'],
                                         'l0':
                                             load_areas['sector_consumption_agricultural']}
-                                        ).elec_demand.max(axis=0)
+                                        ).elec_demand
+
+    if mode == 'peak_load':
+        peak_load = tmp_peak_load.max(axis=0)
+    elif mode == 'timeseries':
+        peak_load = tmp_peak_load
 
     return peak_load
     
@@ -137,14 +142,45 @@ def peak_load_table(mode, schema, table, target_table, section, index_col, db_gr
 
     # add sectoral peak load columns
     if dummy is True:
-        peak_demand = load_areas.iloc[:5].apply(
-            add_sectoral_peak_load, axis=1)
+        results_table = load_areas.iloc[:5].apply(
+            add_sectoral_peak_load, axis=1, args=(mode))
     else:
-        peak_demand = load_areas.apply(
-            add_sectoral_peak_load, axis=1)
+        if mode == 'peak_load':
+            results_table = load_areas.apply(
+                add_sectoral_peak_load, axis=1, args=(mode,))
 
-    # derive resulting table from peak_demand dataframe
-    results_table = peak_demand
+        elif mode == 'timeseries':
+
+            for la_id in load_areas.index.values:
+                # retrieve timeseries for one loadarea
+                timeseries = add_sectoral_peak_load(load_areas.loc[la_id][[
+                        'sector_consumption_residential',
+                       'sector_consumption_retail',
+                       'sector_consumption_industrial',
+                       'sector_consumption_agricultural']], mode)
+
+                # rename column names
+                timeseries = timeseries.rename(columns=columns_names)
+
+                # reshape dataframe and concatenate
+                timeseries['la_id'] = la_id
+                timeseries.set_index(['la_id'], inplace=True, append=True)
+                timeseries.index.names=['date', 'la_id']
+                timeseries = timeseries.reorder_levels(['la_id', 'date'])
+                timeseries.sort_index()
+                timeseries = timeseries.reindex(columns=['residential',
+                                             'retail',
+                                             'industrial',
+                                             'agricultural'],
+                                    fill_value=0)
+                if 'results_table' not in locals():
+                    results_table = timeseries
+                else:
+                    results_table = pd.concat([results_table,
+                        timeseries], axis=0)
+                del(timeseries)
+        else:
+            raise NameError('Select mode out of `peak_load` and `timeseries`')
 
     # establish database connection
     conn = db.connection(section=section)
