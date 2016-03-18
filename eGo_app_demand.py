@@ -193,6 +193,9 @@ def peak_load_table(mode, schema, table, target_table, section, index_col,
     # save output
     if file is None:
 
+        # replace NaN's by zeros
+        results_table = results_table.fillna(0)
+
         # write results to new database table
         results_table.to_sql(target_table,
                              conn,
