@@ -96,8 +96,8 @@ def add_sectoral_peak_load(load_areas, mode, **kwargs):
     return peak_load
     
 
-def peak_load_table(mode, schema, table, target_table, section, index_col, db_group,
-                    dummy):
+def peak_load_table(mode, schema, table, target_table, section, index_col,
+                    db_group, dummy, file):
     r"""Calculates SLP based on input data from oedb
 
     The demandlib of oemof is applied to retrieve demand time-series based on
@@ -190,24 +190,43 @@ def peak_load_table(mode, schema, table, target_table, section, index_col, db_gr
     #                                         columns=list(
     #                                             results_table.columns.values))
 
-    # rename column names
-    results_table = results_table.rename(columns=columns_names)
+    # save output
+    if file is None:
 
-    # write results to new database table
-    results_table.to_sql(target_table,
-                         conn,
-                         schema=schema,
-                         index=True,
-                         if_exists='fail')
+        # write results to new database table
+        results_table.to_sql(target_table,
+                             conn,
+                             schema=schema,
+                             index=True,
+                             if_exists='fail')
 
-    # grant access to db_group
-    tools.grant_db_access(conn, schema, target_table, db_group)
+        # grant access to db_group
+        tools.grant_db_access(conn, schema, target_table, db_group)
 
-    # change owner of table to db_group
-    tools.change_owner_to(conn, schema, target_table, db_group)
+        # change owner of table to db_group
+        tools.change_owner_to(conn, schema, target_table, db_group)
 
-    # add primary key constraint on id column
-    tools.add_primary_key(conn, schema, target_table, index_col)
+        # add primary key constraint on id column
+        tools.add_primary_key(conn, schema, target_table, index_col)
+    else:
+        results_table.to_hdf(file + '.h5', 'results_table')
+
+
+def analyze_demand_data(file):
+    r"""
+
+    Parameters
+    ----------
+    file : str
+        Filename that specifies location of hdf5 file containing demand data
+
+    """
+    demand_data = pd.read_hdf(file + '.h5')
+
+    opsd_dataset = pd.read_csv('timeseries60min_multiindex.csv')
+    print(opsd_dataset.loc['2015-01':'2015-02'])
+    # print(demand_data.sum(level='la_id'))
+
 
 
 if __name__ == '__main__':
@@ -238,6 +257,8 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--db-group', nargs=1, help='Database ' +
         'user group that rights are granted to',
                         default='oeuser')
+    parser.add_argument('-f', '--file', nargs=1, help='Filename ' +
+        'results are stored to (without extension)', default=None)
     parser.add_argument('--dummy', dest='dummy', action='store_true',
                         help='If set, dummy data is applied to annual ' +
                         'consumption.', default=False)
@@ -253,7 +274,10 @@ if __name__ == '__main__':
     if isinstance(args.index_column, list):
         args.index_column = args.index_column[0]
 
-    if args.mode == 'peak_load':
+    if isinstance(args.file, list):
+        args.file = args.file[0]
+
+    if (args.mode == 'peak_load' or args.mode == 'timeseries'):
         peak_load_table(args.mode,
                         args.schema,
                         args.table,
@@ -261,9 +285,7 @@ if __name__ == '__main__':
                         args.database_section,
                         args.index_column,
                         args.db_group,
-                        args.dummy)
-    elif args.mode == 'timeseries':
-        timeseries_table()
-    else:
-        raise NameError('Wrong mode provided. Use `./eGo_app_demand.py -h ' +
-                        'to get some help.')
+                        args.dummy,
+                        args.file)
+    elif args.mode == 'analyze_timeseries':
+        analyze_demand_data(args.file)
