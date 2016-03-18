@@ -271,6 +271,9 @@ if __name__ == '__main__':
     if isinstance(args.table, list):
         args.table = args.table[0]
 
+    if isinstance(args.target_table, list):
+        args.target_table = args.target_table[0]
+
     if isinstance(args.index_column, list):
         args.index_column = args.index_column[0]
 
