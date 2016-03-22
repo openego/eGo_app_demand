@@ -215,7 +215,7 @@ def peak_load_table(mode, schema, table, target_table, section, index_col,
         results_table.to_hdf(file + '.h5', 'results_table')
 
 
-def analyze_demand_data(file):
+def analyze_demand_data(file, schema, table, section):
     r"""
 
     Parameters
@@ -224,12 +224,19 @@ def analyze_demand_data(file):
         Filename that specifies location of hdf5 file containing demand data
 
     """
-    demand_data = pd.read_hdf(file + '.h5')
 
-    opsd_dataset = pd.read_csv('timeseries60min_multiindex.csv')
-    print(opsd_dataset.loc['2015-01':'2015-02'])
-    # print(demand_data.sum(level='la_id'))
 
+    # get entsoe demand data for germany
+
+    # establish database connection
+    conn = db.connection(section=section)
+
+    # retrieve demand data from oedb
+    # returns only demand data for germany of year 2015
+    entsoe_demand = pd.read_sql_table(table,
+                                      conn,
+                                      schema=schema,
+                                      columns=['load_de'],
 
 
 if __name__ == '__main__':
@@ -294,4 +301,7 @@ if __name__ == '__main__':
                         args.dummy,
                         args.file)
     elif args.mode == 'analyze_timeseries':
-        analyze_demand_data(args.file)
+        analyze_demand_data(args.file,
+                            args.schema,
+                            args.table,
+                            args.database_section)
