@@ -10,6 +10,7 @@ import argparse
 from oemof.demandlib import demand as dm
 import numpy as np
 from oemof.db import tools
+from matplotlib import pyplot as plt
 
 
 def get_load_areas_table(schema, table, index_col, section, columns=None):
@@ -225,6 +226,22 @@ def analyze_demand_data(file, schema, table, section):
 
     """
 
+    # get slp based timeseries
+    if file is not None:
+        slp_demand_data = pd.read_hdf(file + '.h5')
+
+        slp_annual_sum = slp_demand_data.sum().sum()
+
+        # sum up across laod areas and sectors
+        slp_demand_data_wo_industrial = slp_demand_data.sum(
+            level='date')[['residential', 'retail', 'agricultural']].sum(axis=1)
+        slp_demand_data = slp_demand_data.sum(level='date').sum(axis=1)
+
+        # rename index: compability with entsoe data
+        slp_demand_data.index = slp_demand_data.index.rename('timestamp')
+        slp_demand_data_wo_industrial.index = (
+            slp_demand_data_wo_industrial.index.rename('timestamp'))
+
 
     # get entsoe demand data for germany
 
@@ -237,6 +254,40 @@ def analyze_demand_data(file, schema, table, section):
                                       conn,
                                       schema=schema,
                                       columns=['load_de'],
+                                      index_col='timestamp')
+
+    entsoe_demand_germany_2015 = entsoe_demand.loc['2015']
+
+    # fill nan's by average demand
+    average = entsoe_demand_germany_2015.mean()
+
+    entsoe_demand_germany_2015 = entsoe_demand_germany_2015.fillna(average)
+
+    # scale entsoe demand data by annual demand given by slp data
+    entsoe_demand_germany_2015_scaled = (entsoe_demand_germany_2015 /
+                                         entsoe_demand_germany_2015.sum() *
+                                         slp_annual_sum)
+
+    # put entsoe and slp data in one dataframe
+    demand_data = slp_demand_data.to_frame(name='slp')
+
+    # add slp without industrial
+    demand_data['slp_wo_industrial'] = slp_demand_data_wo_industrial
+    demand_data['entsoe'] = entsoe_demand_germany_2015_scaled
+
+    # calculate hourly deviation
+    demand_data['deviation'] = demand_data['entsoe'] - demand_data['slp']
+
+    # plot demand data of arbitrary chosen week
+    # demand_data.loc['2015-03-20':'2015-03-26', ['slp', 'entsoe']].plot()
+
+    # plot deviation as histogram
+    demand_data['deviation'].hist(bins=500)
+
+    # plot timeseries in january
+    demand_data.loc['2015-01', ['slp', 'entsoe', 'slp_wo_industrial']].plot()
+
+    plt.show()
 
 
 if __name__ == '__main__':
