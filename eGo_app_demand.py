@@ -159,9 +159,6 @@ def peak_load_table(mode, schema, table, target_table, section, index_col,
                        'sector_consumption_industrial',
                        'sector_consumption_agricultural']], mode)
 
-                # rename column names
-                timeseries = timeseries.rename(columns=columns_names)
-
                 # reshape dataframe and concatenate
                 timeseries['la_id'] = la_id
                 timeseries.set_index(['la_id'], inplace=True, append=True)
@@ -192,6 +189,9 @@ def peak_load_table(mode, schema, table, target_table, section, index_col,
 
     # save output
     if file is None:
+
+        # rename column names
+        results_table = results_table.rename(columns=columns_names)
 
         # replace NaN's by zeros
         results_table = results_table.fillna(0)
