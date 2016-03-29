@@ -18,7 +18,8 @@ if this should only by done for the test area Swabia (Bavaria) call the app as
 follows
 
 ```
-./eGo_app_demand.py peak_load -t rli_deu_loadarea_spf
+./eGo_app_demand.py peak_load -t znes_deu_consumption_spf -tt
+rli_deu_peak_load_spf
 ```
 
 or call
