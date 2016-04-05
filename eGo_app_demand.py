@@ -84,7 +84,7 @@ def add_sectoral_peak_load(load_areas, mode, **kwargs):
                                          'g0':
                                              load_areas['sector_consumption_retail'],
                                          'i0':
-                                             load_areas['sector_consumption_residential'],
+                                             load_areas['sector_consumption_industrial'],
                                         'l0':
                                             load_areas['sector_consumption_agricultural']}
                                         ).elec_demand
