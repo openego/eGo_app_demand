@@ -275,19 +275,42 @@ def analyze_demand_data(file, schema, table, section):
     demand_data['slp_wo_industrial'] = slp_demand_data_wo_industrial
     demand_data['entsoe'] = entsoe_demand_germany_2015_scaled
 
+    # add industrial demand timeseries from diff to entsoe
+    demand_data['industrial_slp_entsoe_diff'] = (demand_data['entsoe'] -
+        demand_data['slp_wo_industrial'])
+
     # calculate hourly deviation
     demand_data['deviation'] = demand_data['entsoe'] - demand_data['slp']
+    demand_data['slp_industrial'] = (demand_data['slp'] -
+                                     demand_data['slp_wo_industrial'])
 
     # plot demand data of arbitrary chosen week
     # demand_data.loc['2015-03-20':'2015-03-26', ['slp', 'entsoe']].plot()
 
     # plot deviation as histogram
     demand_data['deviation'].hist(bins=500)
+    plt.savefig('demand_timeseries_diff_hist.pdf')
 
     # plot timeseries in january
     demand_data.loc['2015-01', ['slp', 'entsoe', 'slp_wo_industrial']].plot()
+    plt.savefig('demand_timeseries_slp_vs_entsoe.pdf')
 
-    plt.show()
+    # plot timeseries for selected week
+    weeks = [27, 32, 5, 12] # given in calender weeks
+
+    for week in weeks:
+        demand_data[demand_data.index.week == week][
+            ['slp', 'entsoe', 'slp_wo_industrial']].plot()
+        plt.ylabel('Electricity demand in GW')
+        plt.savefig('demand_timeseries_slp_vs_entsoe_KW_' + str(week) + '.pdf')
+
+        demand_data[demand_data.index.week == week][
+            ['slp_industrial', 'industrial_slp_entsoe_diff']].plot()
+        plt.ylabel('Electricity demand in GW')
+        plt.savefig('industrial_demand_timeseries_slp_vs_diff_KW_' +
+                    str(week) + '.pdf')
+
+    # plt.show()
 
 
 if __name__ == '__main__':
