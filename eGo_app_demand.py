@@ -188,11 +188,12 @@ def peak_load_table(mode, schema, table, target_table, section, index_col,
     #                                         columns=list(
     #                                             results_table.columns.values))
 
+    # rename column names
+    results_table = results_table.rename(columns=columns_names)
+
     # save output
     if file is None:
 
-        # rename column names
-        results_table = results_table.rename(columns=columns_names)
 
         # replace NaN's by zeros
         results_table = results_table.fillna(0)
