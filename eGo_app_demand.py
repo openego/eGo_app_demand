@@ -146,7 +146,7 @@ def peak_load_table(mode, schema, table, target_table, section, index_col,
             add_sectoral_peak_load, axis=1, args=(mode))
     else:
         if mode == 'peak_load':
-            results_table = load_areas.apply(
+            results_table = load_areas.fillna(0).apply(
                 add_sectoral_peak_load, axis=1, args=(mode,))
 
         elif mode == 'timeseries':
