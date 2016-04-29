@@ -326,18 +326,18 @@ if __name__ == '__main__':
                         'Choose `timeseries` to get a full timeseries in ' +
                         'temporal resolution of one hourly.')
     parser.add_argument('-t', '--table', nargs=1, help='Database table ' +
-        'with input data', default='rli_deu_loadarea')
+        'with input data', default='ego_deu_loads_consumption_spf')
     parser.add_argument('-s', '--schema', nargs=1, help='Database schema',
-                        default='orig_geo_rli')
+                        default='orig_ego')
     parser.add_argument('-tt', '--target-table', nargs=1, help='Database ' +
         'table for results data containing peak loads',
-                        default='rli_deu_peak_load')
+                        default='ego_deu_peak_load_spf')
     parser.add_argument('-ds', '--database-section', nargs=1, help='Section ' +
         'in `config.ini` containing database details',
                         default='oedb')
     parser.add_argument('-icol', '--index-column', nargs=1, help='Annual ' +
         'consumption data table index column',
-                        default='la_id')
+                        default='id')
     parser.add_argument('-g', '--db-group', nargs=1, help='Database ' +
         'user group that rights are granted to',
                         default='oeuser')
