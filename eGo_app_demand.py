@@ -216,7 +216,7 @@ def peak_load_table(mode, schema, table, target_table, section, index_col,
         results_table.to_hdf(file + '.h5', 'results_table')
 
 
-def analyze_demand_data(file, schema, table, section):
+def analyze_demand_data(file, schema, table, section, year=2013):
     r"""
 
     Parameters
